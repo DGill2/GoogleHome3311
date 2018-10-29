@@ -1,3 +1,6 @@
+//FAT32 file system (file allocation table)
+//how files are stored
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -145,7 +148,6 @@ int main()
       {
         file_open = 0; //close the file
         fclose(fp);
-
       }
     }
     if(strcasecmp(token[0],"info")==0) //printing info
@@ -155,6 +157,20 @@ int main()
       printf("BPB_RsvdSecCnt: %d %x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
       printf("   BPB_NumFATS: %d %x\n", BPB_NumFATS, BPB_NumFATS);
       printf("   BPB_FATSz32: %d %x\n", BPB_FATSz32, BPB_FATSz32);
+    }
+
+    //stat should give you info about the file
+    //what attribute value it is
+    //what the size is 
+    //and what the starting cluster is
+    //refer to prof video at 9:00
+    if(strcasecmp(token[0],"stat")==0)
+    {
+      //to do eric
+    }
+    if(strcasecmp(token[0],"get")==0)
+    {
+      //if stat is done
     }
     free( working_root );
 
