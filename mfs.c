@@ -20,7 +20,7 @@ FILE *fp;
 int file_open = 0;
 
 
-//fat32 layout
+//fat32 layout, storing vars
 int16_t   BPB_BytsPerSec;
 int8_t    BPB_SecPerClus;
 int16_t   BPB_RsvdSecCnt;
@@ -112,20 +112,30 @@ int main()
         }
         else
         {
+          //fread paramters are:
+          //1: where is my dest
+          //2: size of item i want to read
+          //3: num of items i want to read
           file_open = 1;
 
           fseek(fp, 11, SEEK_SET); 
           fread(&BPB_BytsPerSec,2 ,1, fp); //bytes per sector
 
           fseek(fp, 13, SEEK_SET);
-		      fread(&BPB_SecPerClus,1,1,fp);
+		      fread(&BPB_SecPerClus,1,1,fp); //sector per cluster
 
           fseek(fp, 14, SEEK_SET);
-		      fread(&BPB_RsvdSecCnt,1,2,fp);
+		      fread(&BPB_RsvdSecCnt,1,2,fp); //reserved sector
+
+          fseek(fp, 16, SEEK_SET);
+          fread(&BPB_NumFATS, 1, 1, fp); //num of FATS
+
+          fseek(fp, 36, SEEK_SET);
+          fread(&BPB_FATSz32, 1, 4, fp);
         }
     }
 
-    if((strcasecmp(token[0],"close"))==0) //if closing file
+    if(strcasecmp(token[0],"close")==0) //if closing file
     {
       if(file_open == 0) //if file already close
       {
@@ -137,6 +147,14 @@ int main()
         fclose(fp);
 
       }
+    }
+    if(strcasecmp(token[0],"info")==0) //printing info
+    {
+      printf("BPB_BytsPerSec: %d %x\n", BPB_BytsPerSec, BPB_BytsPerSec);
+      printf("BPB_SecPerClus: %d %x\n", BPB_SecPerClus, BPB_SecPerClus);
+      printf("BPB_RsvdSecCnt: %d %x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
+      printf("   BPB_NumFATS: %d %x\n", BPB_NumFATS, BPB_NumFATS);
+      printf("   BPB_FATSz32: %d %x\n", BPB_FATSz32, BPB_FATSz32);
     }
     free( working_root );
 
