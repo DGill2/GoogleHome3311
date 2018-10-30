@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
@@ -19,6 +20,27 @@
 #define MAX_COMMAND_SIZE 255    // The maximum command-line size
 
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
+#define BPB_BytsPerSec_Offset 11
+#define BPB_BytsPerSec_Size 2
+
+#define BPB_SecPerClus_Offset 13
+#define BPB_SecPerClus_Size 1
+
+#define BPB_RsvdSecCnt_Offset 14
+#define BPB_RsvdSecCnt_Size 2
+
+#define BPB_NumFATS_Offset 16
+#define BPB_NumFATS_Size 2
+
+#define BPB_RootEntCnt_Offset 17
+#define BPB_RootEntCnt_Size 2
+
+#define BPB_FATSz32_Offset 36
+#define BPB_FATSz32_Size 4
+
+#define BS_VolLab_Offset 36
+#define BS_VolLab_Size 11
+
 FILE *fp;
 int file_open = 0;
 
@@ -37,20 +59,24 @@ int32_t   RootDirSectors =0;
 int32_t   FirstDataSector =0;
 int32_t   FirstSectorofCluster=0;
 
-//prototypes
-void change_directory(char * command);
 
-void change_directory(char * command)
+struct __attribute__((__packed__)) DirectoryEntry
 {
-    //getting the second command has using the chdir to change it to
-    //that directory
-    chdir(command);
-}
+    char DIR_NAME[11];
+    uint8_t DIR_Attr;
+    u_int8_t Unused1[8];
+    u_int16_t DIR_FirstClusterHigh;
+    u_int8_t Unused2[4];
+    uint16_t DIR_FirstClusterLow;
+    uint32_t DIR_FileSize;
+};
+struct DirectoryEntry dir[16];
 
 int main()
 {
 
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+  int root_clus_Address;
 
   while( 1 )
   {
@@ -101,15 +127,12 @@ int main()
     //   printf("token[%d] = %s\n", token_index, token[token_index] );  
     // }
     //opens the file system if the input is open
-    if (token[0] == NULL) //continue if press enter
+    if(token[0] == NULL) //continue if press enter
     {
-      continue;
+        continue;
     }
-    //if they hit renter without input, it will just return
-    //quit the program
-    else if ((strcmp(*token, "quit") == 0) || (strcmp(*token, "exit") == 0))
+    if(strcasecmp(token[0],"quit")==0 || strcasecmp(token[0],"exit")==0)
     {
-      //printf("Exiting now\n");
       exit(0);
     }
     if(strcasecmp(token[0],"open") == 0) //opening file fat32.img
@@ -152,8 +175,13 @@ int main()
 
           fseek(fp, 36, SEEK_SET);
           fread(&BPB_FATSz32, 1, 4, fp);
+
+          //update the root offset
+          root_clus_Address = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec);
+          printf("offset is not %d\n", root_clus_Address);
         }
     }
+
 
     if(strcasecmp(token[0],"close")==0) //if closing file
     {
@@ -165,6 +193,7 @@ int main()
       {
         file_open = 0; //close the file
         fclose(fp);
+        fp = NULL;
       }
     }
     if(strcasecmp(token[0],"info")==0) //printing info
@@ -181,13 +210,27 @@ int main()
     //what the size is 
     //and what the starting cluster is
     //refer to prof video at 9:00
-    if(strcasecmp(token[0],"stat")==0)
+    if (strcasecmp(token[0], "stat") == 0)
     {
-      //to do eric
+
+      //
+      int i;
+      for (int i = 0; i < 16; i++)
+      {
+        fread(&dir[i], 1, 32, fp);
+        printf(" Attr is: %d\n", dir[i].DIR_Attr);
+        printf("File size is:%d\n", dir[i].DIR_FileSize);
+        printf(" Starting Cluster Number is:%d\n", dir[i].DIR_FirstClusterLow);
+        
+      }
     }
     if(strcasecmp(token[0],"get")==0)
     {
       //if stat is done
+    }
+    if(strcasecmp(token[0],"ls")==0)
+    {
+      printf("cluster is %x\n", root_clus_Address);
     }
     free( working_root );
 
