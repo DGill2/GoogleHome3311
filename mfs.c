@@ -105,24 +105,11 @@ int main()
     {
       continue;
     }
-    if (strcmp(*token, "cd") == 0)
-    {
-      //send the second command since path knows cd
-      //change the directy
-      if (token[1] == '\0' || strcmp(token[1], "~") == 0)
-      { //if they dont type anything after cd, send all the way back
-        chdir(getenv("HOME"));
-      }
-      else
-      {
-        change_directory(token[1]);
-      }
-    }
     //if they hit renter without input, it will just return
     //quit the program
     else if ((strcmp(*token, "quit") == 0) || (strcmp(*token, "exit") == 0))
     {
-      printf("Exiting now\n");
+      //printf("Exiting now\n");
       exit(0);
     }
     if(strcasecmp(token[0],"open") == 0) //opening file fat32.img
