@@ -13,16 +13,7 @@
 #include <stdint.h>
 
 
-struct __attribute__((__packed__)) DirectoryEntry{
-  char DIR_Name[11];
-  uint8_t DIR_Attr;
-  uint8_t Unused1[8];
-  uint16_t DIR_FirstClusterHigh;
-  uint8_t Unused2[4];
-  uint16_t DIR_FirstClusterLow;
-  uint32_t DIR_FileSize;
-};
-struct DirectoryEntry dir[16];
+
 
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
