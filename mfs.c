@@ -12,6 +12,19 @@
 #include <signal.h>
 #include <stdint.h>
 
+
+struct __attribute__((__packed__)) DirectoryEntry{
+  char DIR_Name[11];
+  uint8_t DIR_Attr;
+  uint8_t Unused1[8];
+  uint16_t DIR_FirstClusterHigh;
+  uint8_t Unused2[4];
+  uint16_t DIR_FirstClusterLow;
+  uint32_t DIR_FileSize;
+};
+struct DirectoryEntry dir[16];
+
+
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
                                 // In this case  white space
@@ -71,6 +84,11 @@ struct __attribute__((__packed__)) DirectoryEntry
     uint32_t DIR_FileSize;
 };
 struct DirectoryEntry dir[16];
+
+int rootDir=0;
+int curDir=0;
+int i;
+
 
 int main()
 {
@@ -147,8 +165,8 @@ int main()
 		         printf("Error: File system image already open.\n");
 		         continue;
 	     }
-	    fp = fopen(token[1],"r");
 
+	      fp = fopen(token[1],"r");
         if(fp==NULL)
         {
             printf("Error: File system image not found.\n");
@@ -176,9 +194,23 @@ int main()
           fseek(fp, 36, SEEK_SET);
           fread(&BPB_FATSz32, 1, 4, fp);
 
+
           //update the root offset
           root_clus_Address = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec);
           printf("offset is not %d\n", root_clus_Address);
+
+          //calculating address of root directory
+          rootDir = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec)+(BPB_RsvdSecCnt * BPB_BytsPerSec);
+          curDir = rootDir;
+          //allocating 32 bytes of struct 
+          fseek(fp, rootDir, SEEK_SET);
+          memset(&dir,0,16*sizeof(struct DirectoryEntry));
+          for(i = 0; i < 16; i++)
+          {
+            fread(&dir[i],1,32,fp);
+          }
+
+
         }
     }
 
