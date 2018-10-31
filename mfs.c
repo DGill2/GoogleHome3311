@@ -204,19 +204,12 @@ int main()
           curDir = rootDir;
           //allocating 32 bytes of struct 
           fseek(fp, rootDir, SEEK_SET);
-          //memset(&dir,0,16*sizeof(struct DirectoryEntry));
+          memset(&dir,0,16*sizeof(struct DirectoryEntry));
+          
           int i;
           for (i = 0; i < 16; i++)
           {
             fread(&dir[i], 1, 32, fp);
-          }
-
-          for (i = 0; i < 16; i++)
-          {
-            char name[12];
-            memcpy(name, dir[i].DIR_NAME, 11);
-            name[11] = '\0';
-            printf("%s is in cluster low %d\n", name, dir[i].DIR_FirstClusterLow);
           }
         }
     }
@@ -252,15 +245,17 @@ int main()
     if (strcasecmp(token[0], "stat") == 0)
     {
 
-      //
+      //this is not done
+      //this will have to change with more if statements
       int i;
+      fseek(fp, curDir, SEEK_SET);
       for (int i = 0; i < 16; i++)
       {
         fread(&dir[i], 1, 32, fp);
+        printf("%.11s\n", dir[i].DIR_NAME);
         printf(" Attr is: %d\n", dir[i].DIR_Attr);
         printf("File size is:%d\n", dir[i].DIR_FileSize);
-        printf(" Starting Cluster Number is:%d\n", dir[i].DIR_FirstClusterLow);
-        
+        printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
       }
     }
     if(strcasecmp(token[0],"get")==0)
@@ -269,14 +264,12 @@ int main()
     }
     if(strcasecmp(token[0],"ls")==0)
     {
-      //printf("cluster is %x\n", root_clus_Address);
-
-      for (i = 0; i < 16; i++)
+      if (fp != NULL)
       {
-        char name[12];
-        memcpy(name, dir[i].DIR_NAME, 11);
-        name[11] = '\0';
-        printf("%.11s\n", name);
+        for (i = 0; i < 16; i++)
+        {
+          printf("%.11s\n", dir[i].DIR_NAME);
+        }
       }
     }
     free( working_root );
