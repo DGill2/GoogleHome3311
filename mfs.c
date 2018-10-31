@@ -11,6 +11,7 @@
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
+#include <ctype.h>
 
 
 
@@ -185,23 +186,38 @@ int main()
           fseek(fp, 36, SEEK_SET);
           fread(&BPB_FATSz32, 1, 4, fp);
 
+          //BPB_RootEntCnt
+          fseek(fp, BPB_RootEntCnt_Offset, SEEK_SET);
+          fread(&BPB_RootEntCnt, BPB_RootEntCnt_Size, 1, fp);
+
+          //BS_VolLab
+          fseek(fp, BS_VolLab_Offset, SEEK_SET);
+          fread(&BS_VolLab, BS_VolLab_Size, 1 , fp);
+
 
           //update the root offset
           root_clus_Address = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec);
-          printf("offset is not %d\n", root_clus_Address);
+          //printf("offset is not %d\n", root_clus_Address);
 
           //calculating address of root directory
           rootDir = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec)+(BPB_RsvdSecCnt * BPB_BytsPerSec);
           curDir = rootDir;
           //allocating 32 bytes of struct 
           fseek(fp, rootDir, SEEK_SET);
-          memset(&dir,0,16*sizeof(struct DirectoryEntry));
-          for(i = 0; i < 16; i++)
+          //memset(&dir,0,16*sizeof(struct DirectoryEntry));
+          int i;
+          for (i = 0; i < 16; i++)
           {
-            fread(&dir[i],1,32,fp);
+            fread(&dir[i], 1, 32, fp);
           }
 
-
+          for (i = 0; i < 16; i++)
+          {
+            char name[12];
+            memcpy(name, dir[i].DIR_NAME, 11);
+            name[11] = '\0';
+            printf("%s is in cluster low %d\n", name, dir[i].DIR_FirstClusterLow);
+          }
         }
     }
 
@@ -253,7 +269,15 @@ int main()
     }
     if(strcasecmp(token[0],"ls")==0)
     {
-      printf("cluster is %x\n", root_clus_Address);
+      //printf("cluster is %x\n", root_clus_Address);
+
+      for (i = 0; i < 16; i++)
+      {
+        char name[12];
+        memcpy(name, dir[i].DIR_NAME, 11);
+        name[11] = '\0';
+        printf("%.11s\n", name);
+      }
     }
     free( working_root );
 
