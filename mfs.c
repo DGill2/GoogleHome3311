@@ -1,3 +1,6 @@
+//FAT32 file system (file allocation table)
+//how files are stored
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -7,6 +10,12 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
+#include <ctype.h>
+
+
+
+
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
@@ -16,6 +25,27 @@
 #define MAX_COMMAND_SIZE 255    // The maximum command-line size
 
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
+#define BPB_BytsPerSec_Offset 11
+#define BPB_BytsPerSec_Size 2
+
+#define BPB_SecPerClus_Offset 13
+#define BPB_SecPerClus_Size 1
+
+#define BPB_RsvdSecCnt_Offset 14
+#define BPB_RsvdSecCnt_Size 2
+
+#define BPB_NumFATS_Offset 16
+#define BPB_NumFATS_Size 2
+
+#define BPB_RootEntCnt_Offset 17
+#define BPB_RootEntCnt_Size 2
+
+#define BPB_FATSz32_Offset 36
+#define BPB_FATSz32_Size 4
+
+#define BS_VolLab_Offset 36
+#define BS_VolLab_Size 11
+
 FILE *fp;
 int file_open = 0;
 
@@ -34,10 +64,29 @@ int32_t   RootDirSectors =0;
 int32_t   FirstDataSector =0;
 int32_t   FirstSectorofCluster=0;
 
+
+struct __attribute__((__packed__)) DirectoryEntry
+{
+    char DIR_NAME[11];
+    uint8_t DIR_Attr;
+    u_int8_t Unused1[8];
+    u_int16_t DIR_FirstClusterHigh;
+    u_int8_t Unused2[4];
+    uint16_t DIR_FirstClusterLow;
+    uint32_t DIR_FileSize;
+};
+struct DirectoryEntry dir[16];
+
+int rootDir=0;
+int curDir=0;
+int i;
+
+
 int main()
 {
 
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+  int root_clus_Address;
 
   while( 1 )
   {
@@ -92,6 +141,10 @@ int main()
     {
         continue;
     }
+    if(strcasecmp(token[0],"quit")==0 || strcasecmp(token[0],"exit")==0)
+    {
+      exit(0);
+    }
     if(strcasecmp(token[0],"open") == 0) //opening file fat32.img
     {
 	     if(token[1]==NULL)
@@ -104,8 +157,8 @@ int main()
 		         printf("Error: File system image already open.\n");
 		         continue;
 	     }
-	    fp = fopen(token[1],"r");
 
+	      fp = fopen(token[1],"r");
         if(fp==NULL)
         {
             printf("Error: File system image not found.\n");
@@ -132,8 +185,40 @@ int main()
 
           fseek(fp, 36, SEEK_SET);
           fread(&BPB_FATSz32, 1, 4, fp);
+
+          //BPB_RootEntCnt
+          fseek(fp, BPB_RootEntCnt_Offset, SEEK_SET);
+          fread(&BPB_RootEntCnt, BPB_RootEntCnt_Size, 1, fp);
+
+          //BS_VolLab
+          fseek(fp, BS_VolLab_Offset, SEEK_SET);
+          fread(&BS_VolLab, BS_VolLab_Size, 1 , fp);
+
+
+          //update the root offset
+          root_clus_Address = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec);
+          //printf("offset is not %d\n", root_clus_Address);
+
+          //calculating address of root directory
+          rootDir = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec)+(BPB_RsvdSecCnt * BPB_BytsPerSec);
+          //printf("%x\n", root_clus_Address);
+          curDir = rootDir;
+          //allocating 32 bytes of struct 
+          fseek(fp, rootDir, SEEK_SET);          
+          
+          int i;
+          for (i = 0; i < 16; i++)
+          {
+            fread(&dir[i], sizeof(struct DirectoryEntry),1, fp);
+          }
+
+          // for(i=0; i < 16; i++)
+          // {
+          //   printf("%s\n", dir[i].DIR_NAME);
+          // }
         }
     }
+
 
     if(strcasecmp(token[0],"close")==0) //if closing file
     {
@@ -145,7 +230,7 @@ int main()
       {
         file_open = 0; //close the file
         fclose(fp);
-
+        fp = NULL;
       }
     }
     if(strcasecmp(token[0],"info")==0) //printing info
@@ -155,6 +240,63 @@ int main()
       printf("BPB_RsvdSecCnt: %d %x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
       printf("   BPB_NumFATS: %d %x\n", BPB_NumFATS, BPB_NumFATS);
       printf("   BPB_FATSz32: %d %x\n", BPB_FATSz32, BPB_FATSz32);
+    }
+
+    //stat should give you info about the file
+    //what attribute value it is
+    //what the size is 
+    //and what the starting cluster is
+    //refer to prof video at 9:00
+    if (strcasecmp(token[0], "stat") == 0) //needs to print for a specefic given file
+    {
+      //printf("inside stat\n");
+      //this is not done
+      //this will have to change with more if statements 
+      int i;
+      //fseek(fp, curDir, SEEK_SET);
+      
+      for (int i = 0; i < 16; i++)
+      {
+        char name[12]; //adding a null terminate to end of file names
+        // memcpy(name, dir[i].DIR_NAME, 11);
+        // name[11] = '\0';
+        // printf("%s\n", name);
+        //if(strcasecmp(token[1], name) == 0)
+        {
+        //fread(&dir[i], 1, 32, fp);
+        printf("%.11s\n", dir[i].DIR_NAME);
+        printf(" Attr is: %d\n", dir[i].DIR_Attr);
+        printf("File size is:%d\n", dir[i].DIR_FileSize);
+        printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
+        }
+        //else printf("none\n");
+      }
+    }
+    if(strcasecmp(token[0],"get")==0)
+    {
+      //if stat is done
+    }
+    if(strcasecmp(token[0],"ls")==0)
+    {
+      if (fp != NULL)
+      {
+        
+        for (i = 0; i < 16; i++)
+        {
+          if(dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20) //bascially print the acutal files not the junk with it (the delted files or nulls)
+          {
+            char name[12]; //adding a null terminate to end of file names
+            memcpy(name, dir[i].DIR_NAME, 11);
+            name[11] = '\0';
+            printf("%.11s\n", name);
+
+          }
+        }
+      }
+    }
+    if(strcasecmp(token[0],"cd")==0)
+    {
+
     }
     free( working_root );
 
