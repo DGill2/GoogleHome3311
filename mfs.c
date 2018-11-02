@@ -251,25 +251,46 @@ int main()
     {
       //printf("inside stat\n");
       //this is not done
-      //this will have to change with more if statements 
+      //this will have to change with more if statements
       int i;
       //fseek(fp, curDir, SEEK_SET);
-      
+
       for (int i = 0; i < 16; i++)
       {
         char name[12]; //adding a null terminate to end of file names
-        // memcpy(name, dir[i].DIR_NAME, 11);
-        // name[11] = '\0';
-        // printf("%s\n", name);
-        //if(strcasecmp(token[1], name) == 0)
+        memcpy(name, dir[i].DIR_NAME, 11);
+        name[11] = '\0';
+
+        //were gonna make a new char and give it the new name
+        //this will be the name we will compare to show stats
+        char new_name[12];
+
+        int j;
+        int g = 0;
+        for (j = 0; j < 11; j++)
         {
-        //fread(&dir[i], 1, 32, fp);
-        printf("%.11s\n", dir[i].DIR_NAME);
-        printf(" Attr is: %d\n", dir[i].DIR_Attr);
-        printf("File size is:%d\n", dir[i].DIR_FileSize);
-        printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
+          if (name[j] != ' ')
+          {
+            new_name[g] = name[j];
+            // printf("%c", new_name[g]);
+            g++;
+            new_name[g] = '\0';
+          }
         }
-        //else printf("none\n");
+        // printf("\n");
+        //Leave this here so we can see all the real names
+        // printf("new name is %s\n", new_name);
+
+        if (strcasecmp(token[1], new_name) == 0)
+        {
+          {
+
+            printf("\n%.11s\n", dir[i].DIR_NAME);
+            printf(" Attr is: %d\n", dir[i].DIR_Attr);
+            printf("File size is:%d\n", dir[i].DIR_FileSize);
+            printf(" Starting Cluster Number is:%d\n\n", dir[i].DIR_FirstClusterLow);
+          }
+        }
       }
     }
     if(strcasecmp(token[0],"get")==0)
