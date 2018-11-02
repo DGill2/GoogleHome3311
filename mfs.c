@@ -201,16 +201,21 @@ int main()
 
           //calculating address of root directory
           rootDir = (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec)+(BPB_RsvdSecCnt * BPB_BytsPerSec);
+          //printf("%x\n", root_clus_Address);
           curDir = rootDir;
           //allocating 32 bytes of struct 
-          fseek(fp, rootDir, SEEK_SET);
-          memset(&dir,0,16*sizeof(struct DirectoryEntry));
+          fseek(fp, rootDir, SEEK_SET);          
           
           int i;
           for (i = 0; i < 16; i++)
           {
-            fread(&dir[i], 1, 32, fp);
+            fread(&dir[i], sizeof(struct DirectoryEntry),1, fp);
           }
+
+          // for(i=0; i < 16; i++)
+          // {
+          //   printf("%s\n", dir[i].DIR_NAME);
+          // }
         }
     }
 
@@ -242,20 +247,29 @@ int main()
     //what the size is 
     //and what the starting cluster is
     //refer to prof video at 9:00
-    if (strcasecmp(token[0], "stat") == 0)
+    if (strcasecmp(token[0], "stat") == 0) //needs to print for a specefic given file
     {
-
+      //printf("inside stat\n");
       //this is not done
-      //this will have to change with more if statements
+      //this will have to change with more if statements 
       int i;
-      fseek(fp, curDir, SEEK_SET);
+      //fseek(fp, curDir, SEEK_SET);
+      
       for (int i = 0; i < 16; i++)
       {
-        fread(&dir[i], 1, 32, fp);
+        char name[12]; //adding a null terminate to end of file names
+        // memcpy(name, dir[i].DIR_NAME, 11);
+        // name[11] = '\0';
+        // printf("%s\n", name);
+        //if(strcasecmp(token[1], name) == 0)
+        {
+        //fread(&dir[i], 1, 32, fp);
         printf("%.11s\n", dir[i].DIR_NAME);
         printf(" Attr is: %d\n", dir[i].DIR_Attr);
         printf("File size is:%d\n", dir[i].DIR_FileSize);
         printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
+        }
+        //else printf("none\n");
       }
     }
     if(strcasecmp(token[0],"get")==0)
@@ -266,11 +280,23 @@ int main()
     {
       if (fp != NULL)
       {
+        
         for (i = 0; i < 16; i++)
         {
-          printf("%.11s\n", dir[i].DIR_NAME);
+          if(dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20) //bascially print the acutal files not the junk with it (the delted files or nulls)
+          {
+            char name[12]; //adding a null terminate to end of file names
+            memcpy(name, dir[i].DIR_NAME, 11);
+            name[11] = '\0';
+            printf("%.11s\n", name);
+
+          }
         }
       }
+    }
+    if(strcasecmp(token[0],"cd")==0)
+    {
+
     }
     free( working_root );
 
