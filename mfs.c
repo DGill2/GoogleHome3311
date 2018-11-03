@@ -77,6 +77,11 @@ struct __attribute__((__packed__)) DirectoryEntry
 };
 struct DirectoryEntry dir[16];
 
+int LBAtoOffset(int32_t sector)
+{
+  return ((sector -2) * BPB_BytsPerSec) + (BPB_BytsPerSec* BPB_RsvdSecCnt) + (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec);
+}
+
 int rootDir=0;
 int curDir=0;
 int i;
@@ -250,26 +255,109 @@ int main()
     if (strcasecmp(token[0], "stat") == 0) //needs to print for a specefic given file
     {
       //printf("inside stat\n");
-      //this is not done
-      //this will have to change with more if statements 
-      int i;
-      //fseek(fp, curDir, SEEK_SET);
-      
-      for (int i = 0; i < 16; i++)
+      //lets see if the user has used a . so we know whether to look for a file or folder
+      //flag is found a period in user input
+      int period;
+      int flag_for_period_found = 0;
+      for (period = 0; period < strlen(token[1]); period++)
       {
-        char name[12]; //adding a null terminate to end of file names
-        // memcpy(name, dir[i].DIR_NAME, 11);
-        // name[11] = '\0';
-        // printf("%s\n", name);
-        //if(strcasecmp(token[1], name) == 0)
+        if (token[1][period] == '.') //if we find a period, Lets excute a file** else ** a folder
         {
-        //fread(&dir[i], 1, 32, fp);
-        printf("%.11s\n", dir[i].DIR_NAME);
-        printf(" Attr is: %d\n", dir[i].DIR_Attr);
-        printf("File size is:%d\n", dir[i].DIR_FileSize);
-        printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
+          // printf("Found a period\n");
+          flag_for_period_found = 1;
         }
-        //else printf("none\n");
+      }
+      if (flag_for_period_found == 1) //Look for file type
+      {
+        int i;
+        // printf("Lookign for file!\n");
+        for (int i = 0; i < 16; i++)
+        {
+          char name[12]; //adding a null terminate to end of file names
+          memcpy(name, dir[i].DIR_NAME, 11);
+          name[11] = '\0';
+
+          char new_name[12];
+          int j;
+          int g;
+          for (j = 0, g = 0; j < 8; j++)
+          {
+            if (name[j] != ' ')
+            {
+              new_name[g] = name[j];
+              // printf("%c", new_name[g]);
+              g++;
+              new_name[g] = '.';
+            }
+          }
+          g++;
+          for (j = 8; j < 11; j++)
+          {
+            new_name[g] = name[j];
+            g++;
+            new_name[g] = '\0';
+          }
+          //printf("new name is currently %s & token is %s\n", new_name, token[1]);
+          if (strcasecmp(token[1], new_name) == 0)
+          {
+            {
+
+              printf("\n%.11s\n", dir[i].DIR_NAME);
+              printf(" Attr is: %d\n", dir[i].DIR_Attr);
+              printf("File size is:%d\n", dir[i].DIR_FileSize);
+              printf(" Starting Cluster Number is:%d\n\n", dir[i].DIR_FirstClusterLow);
+            }
+          }
+        }
+      }
+      else //Look for folder
+      {
+        // printf("Lookign for folder!\n");
+
+        //this is not done
+        //this will have to change with more if statements
+        int i;
+        //fseek(fp, curDir, SEEK_SET);
+
+        for (int i = 0; i < 16; i++)
+        {
+          char name[12]; //adding a null terminate to end of file names
+          memcpy(name, dir[i].DIR_NAME, 11);
+          name[11] = '\0';
+
+          //were gonna make a new char and give it the new name
+          //this will be the name we will compare to show stats
+          char new_name[12];
+
+          int j;
+          int g = 0;
+          for (j = 0; j < 11; j++)
+          {
+            if (name[j] != ' ')
+            {
+              new_name[g] = name[j];
+              // printf("%c", new_name[g]);
+              g++;
+              new_name[g] = '\0';
+            }
+          }
+          // printf("\n");
+          //Leave this here so we can see all the real names
+          //printf("new name is %s\n", new_name);
+
+          //printf("%s & %s\n", token[1], token[2]);
+
+          if (strcasecmp(token[1], new_name) == 0)
+          {
+            {
+
+              printf("\n%.11s\n", dir[i].DIR_NAME);
+              printf(" Attr is: %d\n", dir[i].DIR_Attr);
+              printf("File size is:%d\n", dir[i].DIR_FileSize);
+              printf(" Starting Cluster Number is:%d\n\n", dir[i].DIR_FirstClusterLow);
+            }
+          }
+        }
       }
     }
     if(strcasecmp(token[0],"get")==0)
