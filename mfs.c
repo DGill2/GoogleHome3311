@@ -82,6 +82,15 @@ int LBAtoOffset(int32_t sector)
   return ((sector -2) * BPB_BytsPerSec) + (BPB_BytsPerSec* BPB_RsvdSecCnt) + (BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec);
 }
 
+int16_t NextLB(uint32_t sector)
+{
+  uint32_t FATAddress = (BPB_BytsPerSec * BPB_RsvdSecCnt) + (sector * 4);
+  int16_t val;
+  fseek(fp, FATAddress, SEEK_SET);
+  fread(&val, 2,1,fp);
+  return val;
+}
+
 int rootDir=0;
 int curDir=0;
 int i;
@@ -362,8 +371,91 @@ int main()
     }
     if(strcasecmp(token[0],"get")==0)
     {
-      //if stat is done
+
+      int i;
+      char new_name[12];
+     
+      for (int i = 0; i < 16; i++)
+      {
+        char name[12]; //adding a null terminate to end of file names
+        memcpy(name, dir[i].DIR_NAME, 11);
+        name[11] = '\0';
+
+        int j;
+        int g;
+        for (j = 0, g = 0; j < 8; j++)
+        {
+          if (name[j] != ' ')
+          {
+            new_name[g] = name[j];
+            // printf("%c", new_name[g]);
+            g++;
+            new_name[g] = '.';
+          }
+        }
+        g++;
+        for (j = 8; j < 11; j++)
+        {
+          new_name[g] = name[j];
+          new_name[g] = tolower(new_name[g]);
+          g++;
+          new_name[g] = '\0';
+        }
+        //printf("new name is %s & token[1] %s\n", new_name, token[1]);
+
+        //printf("new name is %s & token[1] %s\n", new_name, token[1]);
+
+        if (strcasecmp(token[1], new_name) == 0)
+        {
+          //printf("here the name is %s\n\n", new_name);
+          FILE *newfp = fopen(new_name, "w");
+
+          int file_size;
+          int LowClusterNumber = dir[i].DIR_FirstClusterLow;
+          printf("lowCluster is %d of %.11s\n", dir[i].DIR_FirstClusterLow, dir[i].DIR_NAME);
+          int offset = LBAtoOffset(LowClusterNumber);
+
+          file_size = dir[i].DIR_FileSize;
+          printf("inside file size is %d\n", file_size);
+          fseek(fp, offset, SEEK_SET);
+
+          char get_chars[file_size];
+          int k;
+          for (k = 0; k < file_size; k++)
+          {
+            fread(&get_chars[k], 1, 1, fp);
+          }
+          printf("outside file size is %d\n", file_size);
+
+          while (file_size >= 512)
+          {
+            fwrite(&get_chars, 1, 512, newfp);
+            file_size = file_size - 512;
+
+            //find the new logical block
+            LowClusterNumber = NextLB(LowClusterNumber);
+
+            if (LowClusterNumber == -1)
+            {
+              printf("next cluster is -1\n");
+              break;
+            }
+
+            offset = LBAtoOffset(LowClusterNumber);
+            fseek(fp, offset, SEEK_SET);
+          }
+          printf("STILL file size is %d\n", file_size);
+          if (file_size > 0)
+          {
+            printf("file size is > 0\n");
+            fwrite(&get_chars, 1, file_size, newfp);
+          }
+
+          fclose(newfp);
+        }
+      }
     }
+
     if(strcasecmp(token[0],"ls")==0)
     {
       if (fp != NULL)
