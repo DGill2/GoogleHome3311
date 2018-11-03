@@ -15,6 +15,11 @@
 
 
 
+// string file = dir[i].DIR_NAME;
+            // file = file.substr(0,11);
+            // cout << file << "\n";
+            //printf("--%s--\n", token[1]);
+            //printf("name %s\n", name);
 
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
@@ -49,7 +54,6 @@
 FILE *fp;
 int file_open = 0;
 
-
 //fat32 layout, storing vars
 int16_t   BPB_BytsPerSec;
 int8_t    BPB_SecPerClus;
@@ -64,6 +68,9 @@ int32_t   RootDirSectors =0;
 int32_t   FirstDataSector =0;
 int32_t   FirstSectorofCluster=0;
 
+int rootDir=0;
+int curDir=0;
+int i;
 
 struct __attribute__((__packed__)) DirectoryEntry
 {
@@ -77,10 +84,37 @@ struct __attribute__((__packed__)) DirectoryEntry
 };
 struct DirectoryEntry dir[16];
 
-int rootDir=0;
-int curDir=0;
-int i;
+//Finds the starting address for a block of data given the sector number corresponding to that data block
+int LBAToOffset(int32_t sector)
+{
+  return ((sector-2) * BPB_BytsPerSec) + (BPB_BytsPerSec * BPB_RsvdSecCnt)+(BPB_NumFATS * BPB_FATSz32 * BPB_BytsPerSec);
+}
+//Given a logical block address, look up into the first FAT and there is no futher block then return -1
+int16_t NextLB(uint32_t sector)
+{
+  uint32_t FATAdderess = (BPB_BytsPerSec * BPB_RsvdSecCnt) + (sector * 4);
+  int16_t val;
+  fseek(fp, FATAdderess, SEEK_SET);
+  fread(&val, 2 , 1, fp);
+  return val;
+}
 
+// char* parseStr(char* in, int s)
+// {
+
+//   char output[12]="";
+  
+//   char* token = strtok(in, " ");
+//   while (token) 
+//   {
+   
+//     strcat(output, token);
+//     token = strtok(NULL, " ");
+    
+//   }
+//   //printf("%s\n", output);
+//   return output;
+// }
 
 int main()
 {
@@ -249,6 +283,10 @@ int main()
     //refer to prof video at 9:00
     if (strcasecmp(token[0], "stat") == 0) //needs to print for a specefic given file
     {
+      if(file_open == 0) //if file already close
+      {
+        printf("Error: File system not open.\n");
+      }
       //printf("inside stat\n");
       //this is not done
       //this will have to change with more if statements 
@@ -278,12 +316,16 @@ int main()
     }
     if(strcasecmp(token[0],"ls")==0)
     {
+      if(file_open == 0) //if file already close
+      {
+        printf("Error: File system not open.\n");
+      }
       if (fp != NULL)
       {
         
         for (i = 0; i < 16; i++)
         {
-          if(dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20) //bascially print the acutal files not the junk with it (the delted files or nulls)
+          if(dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20) //bascially print the acutal files not the junk with it (the deleted files or nulls)
           {
             char name[12]; //adding a null terminate to end of file names
             memcpy(name, dir[i].DIR_NAME, 11);
@@ -296,7 +338,55 @@ int main()
     }
     if(strcasecmp(token[0],"cd")==0)
     {
-
+      if(file_open == 0) //if file already close
+      {
+        printf("Error: File system not open.\n");
+      }
+      else if(token[1] ==  NULL)
+      {
+        int ad=LBAToOffset(2);
+        fseek(fp, ad, SEEK_SET);
+        int j;
+        for(j = 0; j < 16; j++)
+        {
+          memset(&dir[j].DIR_NAME, 0, 11);
+          fread(&dir[j],1,32,fp);
+        }
+      }
+      else 
+      {
+        
+        int i=0;
+        for(i=0; i < 16; i++)
+        {
+          int ad = LBAToOffset(dir[i].DIR_FirstClusterLow);
+        //printf("%x\n", ad);
+        fseek(fp, ad, SEEK_SET);
+          if(dir[i].DIR_Attr == 0x10)
+          {
+            char name[12]; //adding a null terminate to end of file names
+            memcpy(name, dir[i].DIR_NAME, 11);
+            name[11] = '\0';
+            
+            int q; 
+            for(q=0; q < 12; q++) //filling empty spaces with null to cmp the folder name
+            {
+              if(name[q] == ' ')
+              {
+                name[q] = '\0';
+              }
+            }
+            int k;
+            for(k=0; k < 16; k++)
+            {
+            if(strcasecmp(name, token[1]) <= 0)
+            {
+          		fread(&dir[k],1,32,fp);              
+            }
+            }
+          }
+        }
+      }
     }
     free( working_root );
 
