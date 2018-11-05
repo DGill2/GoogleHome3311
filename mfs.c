@@ -70,7 +70,8 @@ int32_t   FirstSectorofCluster=0;
 
 int rootDir=0;
 int curDir=0;
-int i;
+int i, inside=0, ad=0; //inside is if u inside the dir, if its found, if not the input dir dont exist
+//ad for the current directory being used (ad for address when passed to LBAToOffset)
 
 struct __attribute__((__packed__)) DirectoryEntry
 {
@@ -183,13 +184,13 @@ int main()
     {
 	     if(token[1]==NULL)
 	     {
-		        printf("Error: File system image not found.\n");
-		          continue;
+		      printf("Error: File system image not found.\n");
+		      continue;
 	     }
 	     if(file_open == 1)
 	     {
-		         printf("Error: File system image already open.\n");
-		         continue;
+		      printf("Error: File system image already open.\n");
+		      continue;
 	     }
 
 	      fp = fopen(token[1],"r");
@@ -288,26 +289,109 @@ int main()
         printf("Error: File system not open.\n");
       }
       //printf("inside stat\n");
-      //this is not done
-      //this will have to change with more if statements 
-      int i;
-      //fseek(fp, curDir, SEEK_SET);
-      
-      for (int i = 0; i < 16; i++)
+      //lets see if the user has used a . so we know whether to look for a file or folder
+      //flag is found a period in user input
+      int period;
+      int flag_for_period_found = 0;
+      for (period = 0; period < strlen(token[1]); period++)
       {
-        char name[12]; //adding a null terminate to end of file names
-        // memcpy(name, dir[i].DIR_NAME, 11);
-        // name[11] = '\0';
-        // printf("%s\n", name);
-        //if(strcasecmp(token[1], name) == 0)
+        if (token[1][period] == '.') //if we find a period, Lets excute a file** else ** a folder
         {
-        //fread(&dir[i], 1, 32, fp);
-        printf("%.11s\n", dir[i].DIR_NAME);
-        printf(" Attr is: %d\n", dir[i].DIR_Attr);
-        printf("File size is:%d\n", dir[i].DIR_FileSize);
-        printf(" Starting Cluster Number is:%d\n\n\n", dir[i].DIR_FirstClusterLow);
+          // printf("Found a period\n");
+          flag_for_period_found = 1;
         }
-        //else printf("none\n");
+      }
+      if (flag_for_period_found == 1) //Look for file type
+      {
+        int i;
+        // printf("Lookign for file!\n");
+        for (int i = 0; i < 16; i++)
+        {
+          char name[12]; //adding a null terminate to end of file names
+          memcpy(name, dir[i].DIR_NAME, 11);
+          name[11] = '\0';
+
+          char new_name[12];
+          int j;
+          int g;
+          for (j = 0, g = 0; j < 8; j++)
+          {
+            if (name[j] != ' ')
+            {
+              new_name[g] = name[j];
+              // printf("%c", new_name[g]);
+              g++;
+              new_name[g] = '.';
+            }
+          }
+          g++;
+          for (j = 8; j < 11; j++)
+          {
+            new_name[g] = name[j];
+            g++;
+            new_name[g] = '\0';
+          }
+          //printf("new name is currently %s & token is %s\n", new_name, token[1]);
+          if (strcasecmp(token[1], new_name) == 0)
+          {
+            {
+
+              printf("\n%.11s\n", dir[i].DIR_NAME);
+              printf(" Attr is: %d\n", dir[i].DIR_Attr);
+              printf("File size is:%d\n", dir[i].DIR_FileSize);
+              printf(" Starting Cluster Number is:%d\n\n", dir[i].DIR_FirstClusterLow);
+            }
+          }
+        }
+      }
+      else //Look for folder
+      {
+        // printf("Lookign for folder!\n");
+
+        //this is not done
+        //this will have to change with more if statements
+        int i;
+        //fseek(fp, curDir, SEEK_SET);
+
+        for (int i = 0; i < 16; i++)
+        {
+          char name[12]; //adding a null terminate to end of file names
+          memcpy(name, dir[i].DIR_NAME, 11);
+          name[11] = '\0';
+
+          //were gonna make a new char and give it the new name
+          //this will be the name we will compare to show stats
+          char new_name[12];
+
+          int j;
+          int g = 0;
+          for (j = 0; j < 11; j++)
+          {
+            if (name[j] != ' ')
+            {
+              new_name[g] = name[j];
+              // printf("%c", new_name[g]);
+              g++;
+              new_name[g] = '\0';
+            }
+          }
+          // printf("\n");
+          //Leave this here so we can see all the real names
+          //printf("new name is %s\n", new_name);
+
+          //printf("%s & %s\n", token[1], token[2]);
+
+          if (strcasecmp(token[1], new_name) == 0)
+          {
+            {
+
+              printf("\n%.11s\n", dir[i].DIR_NAME);
+              printf(" Attr is: %d\n", dir[i].DIR_Attr);
+              printf("File size is:%d\n", dir[i].DIR_FileSize);
+              printf(" Starting Cluster Number is:%d\n\n", dir[i].DIR_FirstClusterLow);
+            }
+          }
+        }
       }
     }
     if(strcasecmp(token[0],"get")==0)
@@ -342,48 +426,113 @@ int main()
       {
         printf("Error: File system not open.\n");
       }
-      else if(token[1] ==  NULL)
+      else if(token[1] ==  NULL) //initially typing cd, goes back to root
       {
         int ad=LBAToOffset(2);
         fseek(fp, ad, SEEK_SET);
         int j;
         for(j = 0; j < 16; j++)
         {
-          memset(&dir[j].DIR_NAME, 0, 11);
           fread(&dir[j],1,32,fp);
         }
       }
       else 
       {
-        
-        int i=0;
-        for(i=0; i < 16; i++)
+        if(token[1] ==  NULL) //typing cd while being in the directories
         {
-          int ad = LBAToOffset(dir[i].DIR_FirstClusterLow);
-        //printf("%x\n", ad);
-        fseek(fp, ad, SEEK_SET);
-          if(dir[i].DIR_Attr == 0x10)
+          int ad=LBAToOffset(2);
+          fseek(fp, ad, SEEK_SET);
+          int j;
+          for(j = 0; j < 16; j++)
           {
-            char name[12]; //adding a null terminate to end of file names
-            memcpy(name, dir[i].DIR_NAME, 11);
-            name[11] = '\0';
-            
-            int q; 
-            for(q=0; q < 12; q++) //filling empty spaces with null to cmp the folder name
+            fread(&dir[j],1,32,fp);
+          }
+        }
+        else //cd ing into the files
+        {
+          char* paths = token[1]; //if input is a path, determine # of files in path 
+          int n;
+          int length = 1;
+          int size = strlen(token[1]);
+          for(n = 0; n < size; n++)
+          {
+            if(paths[n] == '/')
             {
-              if(name[q] == ' ')
+              length++;
+            }
+          }
+          int start=0; //start from 1st file name, then 2nd and so on and this need to be init out of the loop!!!
+          while(length >= 1) //will excecute cd for 1 or more files
+          {
+            //if there is a path of files, then enter into the file one at a time
+            //first store the first file input name and fseek there and then the next
+            int go; //iterate through each of the file input(paths)
+            char input_file[12];
+            int f = strlen(token[1]); //length of while path
+             
+            int in = 0; //input file storer iterator 
+            
+            int temp = length;
+            for(go=start; go<f; go++)
+            {
+              if(token[1][go] == '/')
               {
-                name[q] = '\0';
+                start = go+1; //next time loop execute it will the get the position of the 2nd file name
+                //printf("%d\n", go);
+                break;
+              }
+              else
+              {
+                input_file[in] = token[1][go];
+                in++;
               }
             }
-            int k;
-            for(k=0; k < 16; k++)
+            //printf("%s\n", input_file);
+            int i,k;
+            for(i=0; i < 16; i++)
             {
-            if(strcasecmp(name, token[1]) <= 0)
+                //fseek(fp, ad, SEEK_SET);
+
+                char name[12]; //adding a null terminate to end of file names
+                memcpy(name, dir[i].DIR_NAME, 11);
+                name[11] = '\0';
+
+                int q; 
+                for(q=0; q < 12; q++) //filling empty spaces with null to cmp the folder name
+                {
+                  if(name[q] == ' ')
+                  {
+                    name[q] = '\0';
+                  }
+                }
+              if(strcasecmp(name, input_file) == 0)
+              {
+                inside = 1;
+                if(strcmp(token[1],  "..") == 0)
+                {
+                 //go back
+                }
+                else
+                {
+                  ad = dir[i].DIR_FirstClusterLow;
+                  int get = LBAToOffset(dir[i].DIR_FirstClusterLow);
+                  fseek(fp, get, SEEK_SET);
+                  
+                  for(k=0;k< 16; k++)
+                  {
+                    //printf("-%c-\n", dir[k].DIR_NAME[0]);
+                    
+                    fread(&dir[k],1,32,fp);
+                  }
+                  
+                }
+              }
+            }
+            if(inside == 0)
             {
-          		fread(&dir[k],1,32,fp);              
+              printf("%s is not a directory \n", token[1]);
             }
-            }
+            length--;
           }
         }
       }
