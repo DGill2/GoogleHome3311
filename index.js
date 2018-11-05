@@ -99,8 +99,7 @@ app.intent(WEIGHT_INTENT, (conv, params, unitWeight) =>{
     //conv.data.unitWeight = unitWeight.match(r_w);
     
     //w_num = parseInt(conv.data.unitWeight);
-    //console.log(conv.data.unitWeight);
-    //console.log(unitWeight);
+   
     
     //var start = unitWeight.indexOf("lbs"); //correct answer is 4
     
